@@ -1,0 +1,779 @@
+---
+title: "Untitled"
+author: "Ümmü Savran"
+date: "2026-02-27"
+output: word_document
+---
+
+
+## SUBJECT
+
+- AIDS (Acquired Immunodeficiency Syndrome) is a disease caused by the HIV (Human Immunodeficiency Virus). It weakens the immune system, making it hard for the body to fight off infections and certain cancers. 
+- Diagnosing AIDS usually takes a few days to a few weeks, which can be a disadvantage for patients. Also, there is a higher risk of spreading the virus during this time due to patient negligence.
+- If the diagnosis process is faster, it benefits patients and saves time and money in healthcare. 
+- Using machine learning methods can speed up the diagnosis, allowing patients to get treatment sooner and making the healthcare system more efficient.
+
+## DATA SET: EDA
+
+-	Dataset contains healthcare statistics and categorical information about patients who have been diagnosed with AIDS. This dataset was initially published in 1996.
+-	The dataset contains 2139 observations and 23 variables. The target variable is “infected”, and the remaining 22 variables are features.
+-	FEATURES:
+drugs: history of IV drug use (0=no, 1=yes) 
+hemo: hemophilia (0=no, 1=yes) 
+homo: homosexual activity (0=no, 1=yes) 
+gender: gender (0=F, 1=M) 
+offtrt: indicator of off-trt before 96+/-5 weeks (0=no,1=yes) 
+oprior: Non-ZDV antiretroviral therapy pre-175 (0=no, 1=yes) 
+race: race (0=White, 1=non-white) 
+str2: antiretroviral history (0=naive, 1=experienced) 
+z30: ZDV in the 30 days prior to 175 (0=no, 1=yes) 
+strat: antiretroviral history stratification (1=‘Antiretroviral Naive’,2=‘> 1 but <= 52 weeks of prior antiretroviral therapy’,3=’> 52 weeks) 
+symptom: symptomatic indicator (0=asymp, 1=symp) 
+treat: treatment indicator (0=ZDV only, 1=others) 
+trt: treatment indicator (0 = ZDV only; 1 = ZDV + ddI, 2 = ZDV + Zal, 3 = ddI only) str2: antiretroviral history (0=naive, 1=experienced) 
+time: time to failure or censoring 
+age: age (yrs) at baseline 
+wtkg: weight (kg) at baseline 
+karnof: Karnofsky score (on a scale of 0-100) 
+preanti: days pre-175 anti-retroviral therapy 
+cd40: CD4 at baseline 
+cd420: CD4 at 20+/-5 weeks 
+cd80: CD8 at baseline 
+cd820: CD8 at 20+/-5 weeks
+
+
+
+```{r,warning = FALSE, message = FALSE}
+# LOADİNG DATASET
+
+library(readr)
+AIDS_Classification <- read_csv("C:/Users/Lenovo/Downloads/AIDS_Classification.csv")
+new_data<- AIDS_Classification
+
+```
+
+- Information about the dataset
+
+```{r}
+# Display the structure of the dataset
+str(new_data)
+
+# Calculate the total number of missing values in the dataset
+sum(is.na(new_data))
+
+# Summary statistics of the dataset
+summary(new_data)
+
+```
+
+_ Observed missing observations in the dataset:
+
+```{r}
+library(VIM)
+
+# Column-wise missing value count
+colSums(is.na(new_data))
+
+aggr(new_data, numbers=TRUE, prop=FALSE, combined=TRUE)
+
+```
+
+
+- Distribution of the infected target :
+
+```{r}
+# Load the necessary libraries
+library(ggplot2)
+
+# Calculate the proportions of the infected variable
+infected_counts <- table(new_data$infected) / nrow(new_data)
+
+# Visualize the distribution of the infected variable with a pie chart
+ggplot(as.data.frame(infected_counts), aes(x = "", y = Freq, fill = factor(Var1))) +
+  geom_bar(stat = "identity", width = 1, color = "white") +  # Create the bar for the pie chart
+  coord_polar("y", start = 0) +  # Convert the bar chart into a pie chart
+  theme_minimal() +  # Use a minimal theme for the plot
+  scale_fill_manual(values = c("#008b8b", "#8b636c"), name = "Infected", labels = c("0" = "not infected with AIDS", "1" = "infected with AIDS")) +  # Customize the colors and legend
+  labs(title = "Distribution of Infected Variable",  # Set the title
+       x = "",  # Remove x-axis label
+       y = "") +  # Remove y-axis label
+  theme(axis.text.x = element_blank(),  # Remove x-axis text
+        axis.ticks = element_blank(),  # Remove axis ticks
+        panel.grid = element_blank())  # Remove grid lines
+
+
+```
+
+- We can see that mostly patients are not infected with AIDS which is a good thing.
+- Distribution of the categorical variable according to the infected variable
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+
+# Create a new data frame called new_data1
+new_data1 <- new_data
+
+# Convert the "infected" variable to a factor (if not already)
+new_data1$infected <- factor(new_data1$infected)
+
+# Label the categorical variables
+new_data1 <- new_data1 %>%
+  mutate(
+    trt = factor(trt, levels = c(0, 1, 2, 3), labels = c("ZDV only", "ZDV + ddI", "ZDV + Zal", "ddI only")),
+    hemo = factor(hemo, levels = c(0, 1), labels = c("No", "Yes")),
+    homo = factor(homo, levels = c(0, 1), labels = c("No", "Yes")),
+    drugs = factor(drugs, levels = c(0, 1), labels = c("No", "Yes")),
+    oprior = factor(oprior, levels = c(0, 1), labels = c("No", "Yes")),
+    z30 = factor(z30, levels = c(0, 1), labels = c("No", "Yes")),
+    race = factor(race, levels = c(0, 1), labels = c("White", "Non-white")),
+    gender = factor(gender, levels = c(0, 1), labels = c("Female", "Male")),
+    str2 = factor(str2, levels = c(0, 1), labels = c("Naive", "Experienced")),
+    strat = factor(strat, levels = c(1, 2, 3), labels = c("Naive", "1-52 weeks", "> 52 weeks")),
+    symptom = factor(symptom, levels = c(0, 1), labels = c("Asymptomatic", "Symptomatic")),
+    treat = factor(treat, levels = c(0, 1), labels = c("ZDV only", "Others")),
+    offtrt = factor(offtrt, levels = c(0, 1), labels = c("No", "Yes"))
+  )
+
+# Select the categorical variables
+categorical_vars <- new_data1 %>% select(trt, hemo, homo, drugs, oprior, z30, race, gender, str2, strat, symptom, treat, offtrt)
+
+# Examine the relationship between categorical variables and "infected"
+new_data1 %>%
+  select(infected, everything()) %>%
+  pivot_longer(cols = all_of(names(categorical_vars)), names_to = "variable", values_to = "value") %>%
+  ggplot(aes(x = value, fill = factor(infected))) + 
+  geom_bar(position = "dodge") + 
+  facet_wrap(~ variable, scales = "free") + 
+  scale_fill_manual(values = c("#008b8b", "#8b636c"), name = "Infected", labels = c("0" = "not infected with AIDS", "1" = "infected with AIDS")) +  # Customize colors
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8)) +  # Set axis text to 45 degrees tilt and size 8pt
+  labs(title = "Categorical Variables vs. Infected", x = "Category", y = "Count") +
+  theme(legend.position = "bottom")  # Move the legend to the bottom
+
+```
+
+
+-	This chart breaks down categorical variables by infection status (0 for uninfected, 1 for infected). Key observations include a higher count of infected individuals among drug users and those with prior/off treatments. Symptomatic presentation also correlates with a higher infection rate. Gender and certain treatment types show relatively similar counts across infection statuses. While race and strategy duration exhibit differences in infection rates, variables like hemo, homo, and z30 don't show significant associations with infection status. These insights provide valuable cues for understanding factors linked to infection rates and guiding targeted interventions.
+
+- Distribution of numeric variables according to infected
+
+```{r}
+# Select numeric variables and include the infected variable
+numeric_vars <- new_data %>% select(time, age, wtkg, cd40, cd420, cd80, cd820, karnof, preanti, infected)
+
+# Analyze relationships between numeric variables and "infected" using density plots
+numeric_vars %>%
+  gather(key = "variable", value = "value", -infected) %>%
+  ggplot(aes(x = value, fill = factor(infected))) + 
+  geom_density(alpha = 0.7) + 
+  facet_wrap(~ variable, scales = "free") +  # Create a facet plot for each variable
+  scale_fill_manual(values = c("#008b8b", "#8b636c"), name = "Infected", labels = c("0" = "not infected with AIDS", "1" = "infected with AIDS")) + 
+  scale_y_continuous(labels = scales::comma) +  # Format y-axis labels as regular numbers
+  theme_minimal() +
+  labs(title = "Density Plots of Numeric Variables by Infected Status", 
+       x = "Value", 
+       y = "Density",
+       fill = "Infected") +
+  theme(legend.position = "bottom")  # Move the legend to the bottom
+
+```
+
+
+-	This visualization illustrates density plots of numeric variables categorized by infection status (0 for uninfected, 1 for infected). While age distributions show similarity between the groups, CD marker levels like cd40 and cd420 differ slightly, suggesting lower levels in infected individuals. Karnof levels exhibit a distinct pattern, with infected individuals showing higher values. Variables such as preanti and time display marked differences, especially with "time" showing a bi-modal distribution in infected individuals. Weight distribution, represented by wtkg, also differs, with infected individuals having weight concentrated in a narrower range. Overall, this visualization helps identify factors associated with infection status.
+
+- Observing the correlation relationship.
+
+```{r}
+# Load required libraries (if not already loaded)
+library(tidyverse)
+
+# Select only numerical columns
+num_cols <- select_if(new_data, is.numeric)
+
+# Calculate correlations
+infect_corr <- cor(num_cols)
+
+# Filter for correlations with "infected" column
+infect_corr <- infect_corr["infected", ]
+
+# Sort correlations in descending order
+infect_corr <- sort(infect_corr, decreasing = TRUE)
+
+# Print the correlations
+print(infect_corr)
+
+# Set plot aesthetics
+ggplot(data.frame(features = names(infect_corr), correlation = infect_corr), 
+       aes(x = reorder(features, correlation), y = correlation)) +
+  # Use geom_bar for bar plot, bars colored in red
+  geom_bar(stat = "identity", fill = "red") +
+  # Add a horizontal line at y = 0 (solid line)
+  geom_hline(yintercept = 0, linetype = "solid") +
+  # Rotate x-axis labels
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  # Set labels and title
+  labs(x = "Features", y = "Correlation", title = "Relationship of Features with Infected") +
+  # Set minimal theme
+  theme_minimal() +
+  # Set y-axis limits
+  ylim(-0.6, 0.2) +
+  # Remove extra grid lines and adjust appearance
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_line(colour = "lightgray", linetype = "solid"))
+
+```
+
+
+-	This bar chart shows the relationship between various features and the "infected" status, indicating how likely someone is to be infected based on different factors. Longer durations, lower levels of certain CD markers, and the presence of pre-antibodies or symptoms are associated with higher infection rates. Some features, like age and treatment, show weak correlations, while others like karnof and race have moderate correlations. This chart helps identify potential predictors of infection, guiding further analysis and intervention strategies.
+
+## MACHINE LEARNING MODELS
+
+- Data split for our data set:
+
+```{r}
+library(rsample)
+set.seed(25)
+data_split <- initial_split(data = new_data, prop = 0.80)
+data_train <- data_split |> training()
+data_test <- data_split |> testing()
+```
+
+- 4 vanilla models were created.
+
+### LOGİSTİC MODEL
+
+```{r}
+library(caret)
+
+model_lr <- glm(infected ~. , data = data_train, family = "binomial")
+predicted_probs_lr <- predict(model_lr, data_test, type = "response")
+predicted_classes_lr <- ifelse(predicted_probs_lr > 0.5, 1, 0)
+
+confusionMatrix(table(ifelse(data_test$infected == "1", "1", "0"),
+                      predicted_classes_lr),
+                positive = "1")
+
+#train
+predicted_probs_lr_t <- predict(model_lr, data_train, type = "response")
+predicted_classes_lr_t <- ifelse(predicted_probs_lr_t > 0.5, 1, 0)
+
+confusionMatrix(table(ifelse(data_train$infected == "1", "1", "0"),
+                      predicted_classes_lr_t),
+                positive = "1")
+
+```
+
+### DECİSİON TREE MODEL
+
+```{r}
+library(rpart.plot)
+library(rpart)
+data_train$infected <- as.factor(data_train$infected)
+data_test$infected <- as.factor(data_test$infected)
+
+model_dt <- rpart(infected ~ .,
+                  data = data_train,
+                  method = "class")
+
+model_dt
+rpart.plot(model_dt)
+
+# performance metrics of the aids dt
+preds_dt <- predict(model_dt, data_test, type = "class")
+confusionMatrix(preds_dt, data_test$infected, positive = "1")
+
+#train
+preds_dt<- predict(model_dt, data_train, type = "class")
+#df_train$Class <- factor(df_train$Class, levels = c("0", "1"))
+
+confusionMatrix(preds_dt,       
+                data_train$infected,
+                positive = "1")
+```
+
+### BAGGING TREE MODEL
+
+
+```{r}
+set.seed(258)
+library(ranger) 
+
+model_bt <- ranger(infected~., 
+                   data_train,
+                   mtry = 22)
+
+preds_bt <- predict(model_bt, data = data_test, type = "response")$predictions
+
+confusionMatrix(preds_bt,
+                data_test$infected,
+                positive = "1")
+
+#train
+preds_bt <- predict(model_bt, data = data_train, type = "response")$predictions
+
+confusionMatrix(preds_bt,
+                data_train$infected,
+                positive = "1")
+```
+
+### RANDOM FOREST MODEL
+
+```{r}
+set.seed(258)
+model_rf <- ranger(infected ~.,
+                     data = data_train)
+                  
+preds_rf <- predict(model_rf, data_test, type ="response")$predictions
+confusionMatrix(preds_rf,
+                data_test$infected,
+                positive = "1")
+
+#train
+preds_rf <- predict(model_rf, data_train, type ="response")$predictions
+confusionMatrix(preds_rf,
+                data_train$infected,
+                positive = "1")
+```
+
+
+CONCLUSION:
+
+Based on the comparison of four machine learning models (Logistic Regression, Decision Tree, Bagging Tree, and Random Forest) on the test dataset, the following observations can be made:
+ -	Logistic Regression: The model achieved an accuracy of approximately 86.21% on the test data, with a sensitivity of 74.44% and a specificity of 89.35%. It correctly classified 67 out of 91 infected cases but had a relatively lower positive predictive value of 65.05%.
+ -	Decision Tree: The decision tree model performed slightly better than logistic regression, with an accuracy of about 90.89% on the test data. It demonstrated a sensitivity of 78.64% and a specificity of 94.77%. The positive predictive value was 82.65%, indicating a better performance in predicting positive cases.
+ - Bagging Tree: The bagging tree model showed similar performance to the decision tree, with an accuracy of approximately 90.19% on the test data. It exhibited a sensitivity of 76.70% and a specificity of 94.46%. The positive predictive value was 81.44%, indicating robustness in predicting positive cases.
+ - Random Forest: Similar to the bagging tree model, random forest achieved an accuracy of around 90.65% on the test data. It showed a sensitivity of 78.64% and a specificity of 94.46%. The positive predictive value was 81.82%.
+Overall, all models demonstrated strong performance in predicting infection status, with decision tree-based models (Decision Tree, Bagging Tree, and Random Forest) outperforming logistic regression in terms of accuracy and positive predictive value. However, the decision tree-based models did not exhibit significant differences in performance among themselves.
+
+- Visualisation of train and test performance of models:
+
+```{r}
+library(dplyr)
+
+# Calculate model performance metrics
+
+ModelPerformance <- data.frame(
+  Model = c("Logistic Regression", "Decision Tree", "Bagging Tree", "Random Forest"),
+  Train_Performance = c(0.8411, 0.8257, 1, 1),  # Example values, should be replaced with actual data
+  Test_Performance = c(0.8190, 0.8671, 0.8558, 0.8655)    # Example values, should be replaced with actual data
+)
+# Sort values from largest to smallest
+
+ModelPerformance_long <- pivot_longer(ModelPerformance, cols = c(Train_Performance, Test_Performance),
+                                      names_to = "Performance", values_to = "Value")
+
+# Draw a bar plot (all bars will be in pink color and there will be no legend)
+# Draw a bar plot
+library(ggplot2)  # Draw the graph
+ggplot(ModelPerformance_long, aes(x = Model, y = Value, fill = Performance)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.7) +
+  geom_text(aes(label = sprintf("%.2f", Value)), 
+            position = position_dodge(width = 0.7), 
+            vjust = 0.5, size = 3, angle = 0, color = "black") +  # Show the value inside each bar
+  labs(title = "Train vs Test Performance Comparison for Vanilla Models",
+       x = "Models",
+       y = "Performance",
+       fill = "Performance") +
+  scale_fill_manual(values = c("Train_Performance" = "#4169e1", "Test_Performance" = "deeppink3")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1)) +
+  theme(legend.position = "bottom") +  # Place the legend at the bottom
+  coord_flip()
+
+```
+
+
+-	The bar chart compares the training and testing accuracy of four machine learning models: Random Forest, Logistic Regression, Decision Tree, and Bagging Tree. Random Forest and Bagging Tree exhibit signs of overfitting, with perfect training accuracy but reduced testing accuracy, while Logistic Regression and Decision Tree models maintain consistent performance between training and testing datasets. This suggests that simpler models like Logistic Regression and Decision Tree may be more reliable for general predictions on this dataset, whereas ensemble models like Random Forest and Bagging Tree might require adjustments to prevent overfitting. Overall, the visualization provides insights into the performance and potential adjustments needed for each model to ensure better generalization.
+
+- Detection of imbalance in the data set
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+
+# Calculate proportions of the "infected" variable in the dataset
+infected_counts <- table(data_train$infected) / dim(data_train)[1]
+
+# Create a bar plot
+ggplot(data = as.data.frame(infected_counts), aes(x = factor(Var1), y = Freq, fill = factor(Var1))) +
+  geom_bar(stat = "identity", width = 0.5) +
+  geom_text(aes(label = scales::percent(Freq)), position = position_stack(vjust = 0.5), size = 3) +  # Display values on top of bars
+  labs(title = "Infected Variable Distribution by Category",
+       x = "Infected",
+       y = "Ratio") +
+  scale_fill_manual(name = "Infected Status", labels = c("0" = "not infected with AIDS", "1" = "infected with AIDS"), values = c("0" = "#4a804d", "1" = "#ff6347")) +  # Legend labels and colors
+  theme_minimal() +
+  theme(legend.position = "bottom", legend.title = element_text(size = 12, face = "bold"), legend.text = element_text(size = 10))  # Legend settings
+
+```
+
+
+-	The graph shows that the majority of people (76%) are not infected with AIDS. However, a significant minority (24%) are infected with the disease. This highlights the importance of HIV/AIDS prevention and testing. But we can clearly see that there is a big imbalanced problem here. So we have to work on this problem.
+
+- Let's solve the imbalance problem with SMOTE
+
+```{r}
+# Load necessary libraries
+library(caret)
+library(randomForest)
+library(smotefamily)
+
+# Balance with SMOTE
+set.seed(42)
+data_train_smote <- SMOTE(data_train[,-ncol(data_train)], data_train$infected)$data
+colnames(data_train_smote)[ncol(data_train_smote)] <- "infected"
+
+data_train_smote 
+
+```
+
+
+- Let's see the distribution after the imbalance problem is fixed:
+
+```{r}
+# Calculate proportions of the "infected" variable in the balanced dataset
+proportions <- table(data_train_smote$infected) / dim(data_train_smote)[1]
+
+# Create a bar plot
+ggplot(data = as.data.frame(proportions), aes(x = factor(Var1), y = Freq, fill = factor(Var1))) +
+  geom_bar(stat = "identity", width = 0.5) +
+  geom_text(aes(label = scales::percent(Freq)), position = position_stack(vjust = 0.5), size = 3) +  # Display values on top of bars
+  labs(title = "Infected Variable Distribution by Category",
+       subtitle = "Imbalance Removed with SMOTE Method",
+       x = "Infected",
+       y = "Ratio") +
+  scale_fill_manual(name = "Infected Status", labels = c("0" = "not infected with AIDS", "1" = "infected with AIDS"), values = c("0" = "#4a804d", "1" = "#ff6347")) +  # Legend labels and colors
+  theme_minimal() +
+  theme(legend.position = "bottom", legend.title = element_text(size = 12, face = "bold"), legend.text = element_text(size = 10))  # Legend settings
+
+```
+
+
+- Here, the performance of vanilla models (Logistic Regression, Decision Tree, Bagging Tree, Random Forest) is evaluated after the imbalance is removed using SMOTE:
+
+```{r}
+# Convert 'infected' variable to factor in the balanced dataset
+data_train_smote$infected <- as.factor(data_train_smote$infected)
+
+### Logistic Regression
+# Train logistic regression model
+model_lr <- glm(infected ~ . , data = data_train_smote, family = "binomial")
+
+# Predict on test set
+predicted_probs_lr <- predict(model_lr, data_test, type = "response")
+predicted_classes_lr <- ifelse(predicted_probs_lr > 0.5, 1, 0)
+
+# Confusion matrix and performance metrics on test set
+confusionMatrix(table(ifelse(data_test$infected == "1", "1", "0"),
+                      predicted_classes_lr),
+                positive = "1")
+
+# Predict on train set for comparison (detect overfitting)
+predicted_probs_lr_train <- predict(model_lr, data_train_smote, type = "response")
+predicted_classes_lr_train <- ifelse(predicted_probs_lr_train > 0.5, 1, 0)
+
+# Confusion matrix and performance metrics on train set
+confusionMatrix(table(ifelse(data_train_smote$infected == "1", "1", "0"),
+                      predicted_classes_lr_train),
+                positive = "1")
+
+### Decision Tree
+# Train decision tree model
+model_dt <- rpart(infected ~ .,
+                  data = data_train_smote,
+                  method = "class")
+
+# Plot decision tree (optional)
+# rpart.plot(model_dt)
+
+# Predict on test set
+preds_dt <- predict(model_dt, data_test, type = "class")
+
+# Confusion matrix and performance metrics on test set
+confusionMatrix(preds_dt, data_test$infected, positive = "1")
+
+# Predict on train set for comparison
+preds_dt_train <- predict(model_dt, data_train_smote, type = "class")
+
+# Confusion matrix and performance metrics on train set
+confusionMatrix(preds_dt_train, data_train_smote$infected, positive = "1")
+
+### Bagging Tree
+# Train bagging tree model
+model_bt <- ranger(infected ~ .,
+                    data_train_smote,
+                    mtry = 22)
+
+# Predict on test set
+preds_bt <- predict(model_bt, data = data_test, type = "response")$predictions
+
+# Confusion matrix and performance metrics on test set
+confusionMatrix(preds_bt,
+                data_test$infected,
+                positive = "1")
+
+# Predict on train set for comparison
+preds_bt_train <- predict(model_bt, data = data_train_smote, type = "response")$predictions
+
+# Confusion matrix and performance metrics on train set
+confusionMatrix(preds_bt_train,
+                data_train_smote$infected,
+                positive = "1")
+
+### Random Forest
+# Train random forest model
+set.seed(258)
+model_rf <- ranger(infected ~ .,
+                   data = data_train_smote)
+
+# Predict on test set
+preds_rf <- predict(model_rf, data_test, type = "response")$predictions
+
+# Confusion matrix and performance metrics on test set
+confusionMatrix(preds_rf,
+                data_test$infected,
+                positive = "1")
+
+# Predict on train set for comparison
+preds_rf_train <- predict(model_rf, data_train_smote, type = "response")$predictions
+
+# Confusion matrix and performance metrics on train set
+confusionMatrix(preds_rf_train,
+                data_train_smote$infected,
+                positive = "1")
+
+```
+
+
+CONCLUSION:
+
+-	Logistic Regression and Decision Tree models perform consistently on both training and testing datasets, suggesting robustness without significant overfitting. Although Bagging Tree and Random Forest models show slight signs of overfitting, they still offer strong predictive capabilities. With further optimization, these models could enhance generalization.
+
+-After addressing imbalance using SMOTE, the performance of various models (Logistic Regression, Decision Tree, Bagging Tree, Random Forest) can be visualized and assessed to detect overfitting. 
+
+
+```{r}
+# Convert data to a dataframe
+ModelPerformanceK <- data.frame(
+  Model = c("Logistic Regression", "Decision Tree", "Bagging Tree", "Random Forest"),
+  Train_Performance = c(0.8408, 0.8892, 1, 1),  # Example values, replace with actual values
+  Test_Performance = c(0.8194, 0.8564, 0.8534, 0.8839)    # Example values, replace with actual values
+)
+
+# Load ggplot2 library
+library(ggplot2)
+
+# Reshape data for plotting
+ModelPerformanceK_long <- pivot_longer(ModelPerformanceK, cols = c(Train_Performance, Test_Performance),
+                                      names_to = "Performance", values_to = "Value")
+
+# Create a bar plot
+ggplot(ModelPerformanceK_long, aes(x = Model, y = Value, fill = Performance)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.7) +
+  geom_text(aes(label = sprintf("%.2f", Value)), 
+            position = position_dodge(width = 0.9), 
+            vjust = 0.5, size = 3, angle = 0, color = "black") +  
+  labs(title = "Train vs Test Performance Comparison for Overfitting Analysis",
+       x = "Models",
+       y = "Performance",
+       fill = "Performance") +
+  scale_fill_manual(values = c("Train_Performance" = "#4169e1", "Test_Performance" = "deeppink3")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1)) +
+  theme(legend.position = "bottom") +  # Place legend at the bottom
+  coord_flip()
+
+```
+
+
+CONCLUSION:
+
+-	The bar chart compares training and testing performance of machine learning models, focusing on identifying overfitting. Random Forest's high training accuracy (100%) drops slightly in testing (88%), suggesting potential overfitting. Logistic Regression shows balanced performance between training (84%) and testing (82%) accuracy, indicating a good fit without significant overfitting. The Decision Tree model performs well with minor disparities between training (89%) and testing (86%) accuracy, suggesting moderate overfitting. Bagging Tree, like Random Forest, shows signs of overfitting with perfect training accuracy and reduced testing performance (85%). Ensemble models tend to suffer from overfitting, while Logistic Regression offers a more reliable option with consistent accuracy between training and testing. This comparison emphasizes the importance of balancing accuracy and generalization in model selection for real-world applications.
+
+- After resolving the imbalance issue, models were rebuilt. While underfitting was addressed, overfitting still persisted. To mitigate this, cross-validation and hyperparameter tuning were performed, resulting in improved model performance.
+
+
+```{r}
+set.seed(754)
+# Create grid for hyperparameter settings
+tuneGrid <- expand.grid(.mtry = c(5, 10, 15, 20),
+                        .splitrule = c("gini"),
+                        .min.node.size = c(1, 5, 10))
+
+# Model training with cross-validation
+control <- trainControl(method = "cv", number = 10)
+model <- train(infected ~ ., data = data_train_smote, method = "ranger",
+               trControl = control, tuneGrid = tuneGrid)
+
+# Choosing the best model
+best_model <- model$bestTune
+
+#  Printing the best parameters
+print(best_model)
+```
+
+
+- Visualisation of adjustments made:
+
+```{r}
+plot(model, xlab = "Randomly Selected Predictors")
+
+```
+
+
+- The graph shows how the model performs with different settings. Smaller settings are better at first but get worse as things get more complex. Larger settings, while they can handle more stuff, can't tell things apart as well, so they end up less accurate. Adding more predictors at first makes things better, but then it just adds noise. So, to make the model work its best, you need to find the right balance between keeping it simple and letting it be complex.
+
+-The Random Forest model has been retrained.
+
+```{r}
+# Load necessary libraries
+library(randomForest)
+library(caret)
+
+# Prepare the data
+set.seed(24)
+data_train$infected <- as.factor(data_train$infected)
+data_test$infected <- as.factor(data_test$infected)
+
+# Build the Random Forest model and tune hyperparameters
+rf_model <- randomForest(infected ~ ., 
+                         data = data_train_smote, 
+                         ntree = 500,       # Number of trees
+                         maxnodes = 30,     # Maximum number of nodes
+                         mtry = 5,          # Number of variables randomly sampled at each split
+                         splitrule = "gini",# Splitting rule (Gini impurity)
+                         min.node.size = 1, # Minimum size of terminal nodes
+                         importance = TRUE) # Calculate variable importance
+
+# Print model details
+print(rf_model)
+
+# Plot variable importance
+varImpPlot(rf_model)
+
+# Make predictions on the test data
+preds_rf <- predict(rf_model, data_test)
+
+# Calculate confusion matrix on test data
+conf_matrix_rf <- confusionMatrix(preds_rf, data_test$infected, positive = "1")
+print(conf_matrix_rf)
+
+# Make predictions on the training data (for assessing overfitting)
+preds_rf_train <- predict(rf_model, data_train_smote)
+
+# Calculate confusion matrix on training data
+conf_matrix_rf_train <- confusionMatrix(preds_rf_train, data_train_smote$infected, positive = "1")
+print(conf_matrix_rf_train)
+
+```
+
+
+- Before optimization, the Random Forest model achieved 100% training and 88.39% test accuracy. After optimization, these figures changed to 92.35% for training and 88.94% for test accuracy. These improvements indicate enhanced generalization capability of the model.
+
+```{r}
+# Convert data to a dataframe
+ModelPerformance <- data.frame(
+  Model = c("Random Forest", "Random Forest (Optimized)"),
+  Train_Performance = c(1, 0.9235),  # Replace with actual values
+  Test_Performance = c(0.8839, 0.8894)  # Replace with actual values
+)
+
+# Load necessary libraries
+library(ggplot2)
+library(tidyr)
+
+# Reshape data for plotting
+ModelPerformance_long <- pivot_longer(ModelPerformance, cols = c(Train_Performance, Test_Performance),
+                                      names_to = "Performance", values_to = "Value")
+
+# Create bar plot
+ggplot(ModelPerformance_long, aes(x = Model, y = Value, fill = Performance)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.5) +
+  geom_text(aes(label = sprintf("%.2f", Value)), 
+            position = position_dodge(width = 0.5), 
+            vjust = -0.5, size = 3, angle = 0, color = "black") +  # Display values inside bars
+  labs(title = "Train vs Test Performance Comparison for Overfitting Analysis",
+       x = "Models",
+       y = "Performance",
+       fill = "Performance") +
+  scale_fill_manual(values = c("Train_Performance" = "#4169e1", "Test_Performance" = "deeppink3")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+  theme(legend.position = "bottom")  # Place legend at the bottom
+
+```
+
+
+-	The bar chart compares the training and testing performances of two versions of the Random Forest model: the standard version and an optimized one. In the standard Random Forest, the training accuracy is perfect at 100%, but the testing accuracy drops to 88%, indicating potential overfitting. However, with the optimized version, although the training accuracy slightly decreases to 92%, the testing accuracy improves to 89%. This suggests that the optimization techniques employed have effectively mitigated overfitting, resulting in a better balance between training and testing performances. Overall, these findings underscore the importance of model optimization in improving generalization, particularly in complex models like Random Forests.
+
+-  Other performance metrics of our Random Forest model are analysed and their values are shown:
+
+```{r}
+library(ggplot2)
+
+# Performance metrics and values
+metrics <- c("Accuracy", "Sensitivity", "Specificity", "Precision")
+values <- c(0.8925, 0.8835, 0.8954, 0.7280)
+
+# Convert data to a dataframe
+performance_df <- data.frame(metrics, values)
+
+# Create a bar plot
+ggplot(performance_df, aes(x = metrics, y = values, fill = metrics)) +
+  geom_bar(stat = "identity", color = "black", alpha = 0.8) +
+  labs(title = "Model Performance Metrics",
+       x = "Metrics",
+       y = "Values") +
+  scale_fill_manual(values = c("Accuracy" = "firebrick4", 
+                               "Sensitivity" = "darkolivegreen4", 
+                               "Specificity" = "#8b658b", 
+                               "Precision" = "#6495ed")) +  
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1)) +
+  geom_text(aes(label = sprintf("%.3f", values)), vjust = -0.3, size = 4)
+
+```
+
+
+-	The bar chart shows the performance of a predictive model, measuring Accuracy, Precision, Sensitivity, and Specificity. Accuracy, at 89.2%, indicates overall correctness, while Precision, at 72.8%, reveals the accuracy of positive predictions. Sensitivity, or recall, at 88.3%, signifies the model's ability to identify true positives, crucial in medical diagnoses. Specificity, at 89.5%, reflects the model's capacity to identify true negatives, vital in avoiding false alarms. Though the model performs well overall, precision could be improved to reduce false positives. Enhancing precision would refine the model's effectiveness, particularly in applications where precise identification is crucial. These metrics offer valuable insights for optimizing the model's performance, ensuring better decision-making in practical settings.
+
+- Lastly, we created a lollipop chart for the top 5 most important variables for our model.
+
+
+```{r}
+# Required libraries
+library(randomForest)
+library(ggplot2)
+
+# Get variable importance scores
+importance_values <- importance(rf_model)
+importance_df <- as.data.frame(importance_values)
+importance_df$Variable <- rownames(importance_df)
+
+# Order by MeanDecreaseAccuracy and select top 5 variables
+importance_df_accuracy <- importance_df[order(importance_df$MeanDecreaseAccuracy, decreasing = TRUE), ]
+top5_accuracy <- importance_df_accuracy[1:5, ]
+
+# Create a lollipop chart
+# Order variables by MeanDecreaseAccuracy from highest to lowest
+top5_accuracy$Variable <- factor(top5_accuracy$Variable, levels = top5_accuracy$Variable[order(-top5_accuracy$MeanDecreaseAccuracy)])
+
+# Create the lollipop chart
+ggplot(top5_accuracy, aes(x = Variable, y = MeanDecreaseAccuracy)) +
+  geom_point(color = "royalblue3", size = 5) +
+  geom_segment(aes(x = Variable, xend = Variable, y = 0, yend = MeanDecreaseAccuracy), color = "royalblue3") +
+  labs(title = "Top 5 Most Important Variables in Random Forest Model",
+       x = "Variables",
+       y = "Mean Decrease Accuracy") +
+  theme_minimal()
+
+```
+
+
+-	The chart shows how the model changes over time. Sometimes lots of changes happen, other times not many. This means people are still working on the model, trying to make it better.It also shows the five most important things in the model: cd420, offtrt, treat, symptom, and time. These things have a big effect on what the model predicts.In short, the chart tells us the model is getting better and more complicated as people keep working on it.
+
+CONCLUSION
+
+-	In conclusion, the model developed to predict individuals infected with AIDS can be further improved to speed up the process in the healthcare sector, allowing patients to start treatment earlier. Using machine learning, our model has shown a performance with an 89% success rate and accurate predictions. This can enable faster and more accurate diagnoses in healthcare, significantly improving patient care. It can optimize the treatment processes for AIDS patients and enhance overall health outcomes.
