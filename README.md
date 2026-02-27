@@ -36,5 +36,14 @@ Bu proje, makine öğrenmesi yöntemleri kullanarak HIV/AIDS enfeksiyon durumunu
 | **Özgünlük (Specificity)** | %89.5 |
 | **Hassasiyet (Precision)** | %72.8 |
 
-## 🧠 Önemli Değişkenler (Variable Importance)
-Modelin tahmin gücünü en çok etkileyen faktörler: **Tanıya kadar geçen süre (Time)**, **CD420 seviyesi**, **Tedavi durumu** ve **Semptomlar** olarak belirlenmiştir.
+## 🧠 Model Yorumlanabilirliği (Variable Importance)
+Modelin tahmin gücünü en çok etkileyen ilk 5 değişken belirlenmiştir:
+1. **Time (Süre)**: Tanıya kadar geçen süre.
+2. **CD420**: 20. haftadaki CD4 hücre sayısı.
+3. **Offtrt**: Tedavi dışı kalma durumu.
+4. **Treat**: Tedavi yöntemi.
+5. **Symptom**: Semptomatik göstergeler.
+
+## 👥 Katkıda Bulunanlar
+* **Ümmü Savran** 
+* **Ezo Yedigöl**
